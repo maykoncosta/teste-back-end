@@ -1,15 +1,30 @@
 package com.teste.medidorDeSenha.service;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 
+@ExtendWith(MockitoExtension.class)
 public class CredentialServiceTest {
 
     private CredentialService service = new CredentialService();
 
+    @Mock
+    private SecretKeyFactory secretKeyFactory;
 
     @Test
     void testCountOccurrencesUpperCase() {
@@ -154,6 +169,29 @@ public class CredentialServiceTest {
 
         assertTrue(actualScore > expectedScore);
         Assertions.assertNotNull(actualPass);
+    }
+
+    @Test
+    @Disabled
+    void testEncoderPassword() throws InvalidKeySpecException, NoSuchAlgorithmException {
+        // Configuração de entrada
+        String password = "senha123";
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+
+        // Configuração esperada do mock da SecretKeyFactory
+        KeySpec expectedKeySpec = new PBEKeySpec(password.toCharArray(), salt, service.ITERATION_COUNT, service.KEY_LENGTH);
+        Mockito.when(secretKeyFactory.getInstance(Mockito.anyString())).thenReturn(Mockito.any(SecretKeyFactory.class));
+        Mockito.when(secretKeyFactory.generateSecret(expectedKeySpec)).thenReturn(Mockito.mock(javax.crypto.SecretKey.class));
+
+        // Chamada do método
+        byte[] result = service.encoderPassword(password);
+
+        // Verificação
+        Mockito.verify(secretKeyFactory).getInstance(service.ALGORITHM);
+        Mockito.verify(secretKeyFactory).generateSecret(expectedKeySpec);
+        // Verifique se o tamanho do resultado está correto (ajuste conforme necessário)
+        assertArrayEquals(new byte[32], result);
     }
 
 }

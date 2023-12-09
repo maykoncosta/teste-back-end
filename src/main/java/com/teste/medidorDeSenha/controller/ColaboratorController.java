@@ -3,6 +3,7 @@ package com.teste.medidorDeSenha.controller;
 import com.teste.medidorDeSenha.domain.Colaborator;
 import com.teste.medidorDeSenha.domain.dto.ColaboratorDTO;
 import com.teste.medidorDeSenha.service.ColaboratorService;
+import com.teste.medidorDeSenha.service.CredentialService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,9 @@ public class ColaboratorController {
     @Autowired
     private ColaboratorService service;
 
+    @Autowired
+    private CredentialService credentialService;
+
     @GetMapping
     public ResponseEntity<List<ColaboratorDTO>> getAllColaborators() {
         List<ColaboratorDTO> colaborators = service.findAll().getBody();
@@ -30,7 +34,7 @@ public class ColaboratorController {
     }
 
     @PostMapping
-    public ResponseEntity<ColaboratorDTO> createColaborator(@RequestBody Colaborator colaborator) {
+    public ResponseEntity<ColaboratorDTO> createColaborator(@RequestBody ColaboratorDTO colaborator) {
         ResponseEntity<ColaboratorDTO> response = service.save(colaborator);
         return new ResponseEntity<>(response.getBody(), response.getStatusCode());
     }
@@ -45,5 +49,11 @@ public class ColaboratorController {
     public ResponseEntity<Void> deleteColaborator(@PathVariable String id) {
         ResponseEntity<Void> response = service.delete(id);
         return response != null ? response : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+
+    @GetMapping(value = "/generate-pass", produces = "text/plain")
+    public ResponseEntity<String> getGeneratePassword() {
+        String passwordGenerated = credentialService.generatePassword();
+        return new ResponseEntity<>(passwordGenerated, HttpStatus.CREATED);
     }
 }

@@ -11,7 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,11 +41,11 @@ public class ColaboratorService {
         }
     }
 
-    public ResponseEntity<ColaboratorDTO> save(Colaborator colaborator) {
+    public ResponseEntity<ColaboratorDTO> save(ColaboratorDTO colaborator) {
         try {
-            Colaborator savedColaborator = repository.save(colaborator);
-            ColaboratorDTO dto = mapToDTO(savedColaborator);
-            return new ResponseEntity<>(dto, HttpStatus.CREATED);
+            Colaborator entity = mapToEntity(colaborator);
+            Colaborator savedColaborator = repository.save(entity);
+            return new ResponseEntity<>(colaborator, HttpStatus.CREATED);
         } catch (Exception e) {
             // Tratamento de exceção ao salvar
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -89,9 +91,26 @@ public class ColaboratorService {
     private ColaboratorDTO mapToDTO(Colaborator colaborator) {
         ColaboratorDTO dto = new ColaboratorDTO();
         dto.setName(colaborator.getName());
-        dto.setSubordinates(colaborator.getSubordinates().stream().map(this::mapToDTO).collect(Collectors.toList()));
-        dto.setScore(colaborator.getCredential().getScore());
-        dto.setPasswordForce(colaborator.getCredential().getPasswordStrength());
+        if(Objects.nonNull(colaborator.getSubordinates())){
+            dto.setSubordinates(colaborator.getSubordinates().stream().map(this::mapToDTO).collect(Collectors.toList()));
+        }
+        if(Objects.nonNull(colaborator.getCredential())){
+            dto.setScore(colaborator.getCredential().getScore());
+            dto.setPasswordForce(colaborator.getCredential().getPasswordStrength());
+        }
         return dto;
     }
+
+    private Colaborator mapToEntity(ColaboratorDTO dto) {
+        Colaborator colaborator = new Colaborator();
+        colaborator.setName(dto.getName());
+        colaborator.setCredential(credentialService.saveCredential(dto.getPassword()));
+        if(Objects.nonNull(dto.getSubordinates())){
+            colaborator.setSubordinates((Set<Colaborator>) dto.getSubordinates()
+                    .stream().map(this::mapToEntity)
+                    .collect(Collectors.toList()));
+        }
+        return colaborator;
+    }
+
 }

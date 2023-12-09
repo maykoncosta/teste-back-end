@@ -1,16 +1,13 @@
 package com.teste.medidorDeSenha.domain;
 
-import com.teste.medidorDeSenha.config.AuditListener;
-import jakarta.persistence.EntityListeners;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
-@Document
+@Document(collection = "credential")
 @Builder
-@EntityListeners(AuditListener.class)
 public class Credential extends Audit{
 
     @Id
@@ -18,7 +15,7 @@ public class Credential extends Audit{
 
     private int score;
 
-    private String password;
+    private byte[] password;
 
     private int passwordStrength;
 }

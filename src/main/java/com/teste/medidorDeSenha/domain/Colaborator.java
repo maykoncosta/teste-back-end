@@ -1,16 +1,14 @@
 package com.teste.medidorDeSenha.domain;
 
 import com.teste.medidorDeSenha.config.AuditListener;
-import jakarta.persistence.EntityListeners;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Set;
 
-@Document
+@Document(collection = "colaborators")
 @Data
-@EntityListeners(AuditListener.class)
 public class Colaborator extends Audit{
 
     @Id

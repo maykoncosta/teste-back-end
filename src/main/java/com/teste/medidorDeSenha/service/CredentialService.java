@@ -4,10 +4,14 @@ import com.teste.medidorDeSenha.domain.Credential;
 import com.teste.medidorDeSenha.repository.CredentialHistoryRepository;
 import com.teste.medidorDeSenha.repository.CredentialRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,7 +34,11 @@ public class CredentialService {
 
     private static final int BOM = 75;
 
-    private static final int FORTE = 100;
+    public static final String ALGORITHM = "PBKDF2WithHmacSHA1";
+
+    public static final int ITERATION_COUNT = 65536;
+
+    public static final int KEY_LENGTH = 128;
 
     @Autowired
     private CredentialRepository repository;
@@ -38,14 +46,11 @@ public class CredentialService {
     @Autowired
     private CredentialHistoryRepository credentialHistoryRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
     public Credential saveCredential(String password){
 
         int score = calculatePasswordStrength(password);
         int level = defineStrengthLevel(score);
-        String passEncoder = passwordEncoder.encode(password);
+        byte[] passEncoder = encoderPassword(password);
 
         return Credential
                 .builder()
@@ -244,6 +249,28 @@ public class CredentialService {
         }
 
         return password.toString();
+    }
+
+    protected byte[] encoderPassword(String password){
+        SecureRandom random = new SecureRandom();
+        byte[] hash = null;
+        byte[] salt = new byte[16];
+        random.nextBytes(salt);
+
+        KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, ITERATION_COUNT, KEY_LENGTH);
+        SecretKeyFactory factory = null;
+        try {
+            factory = SecretKeyFactory.getInstance(ALGORITHM);
+        } catch (NoSuchAlgorithmException e) {
+            return password.getBytes();
+        }
+
+        try {
+            hash = factory.generateSecret(spec).getEncoded();
+        } catch (InvalidKeySpecException e) {
+            return password.getBytes();
+        }
+        return hash;
     }
 
 }
