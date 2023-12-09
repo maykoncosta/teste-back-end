@@ -15,6 +15,8 @@ public class ColaboratorDTO {
 
     private int score;
 
-    private int passwordForce;
+    private String forcePass;
+
+    private int levelPass;
 
 }

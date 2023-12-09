@@ -27,7 +27,9 @@ public class ColaboratorService {
 
     public ResponseEntity<List<ColaboratorDTO>> findAll() {
         List<Colaborator> colaborators = repository.findAll();
-        List<ColaboratorDTO> dtos = colaborators.stream().map(this::mapToDTO).collect(Collectors.toList());
+        List<ColaboratorDTO> dtos = colaborators
+                .stream().map(this::mapToDTO)
+                .collect(Collectors.toList());
         return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
 
@@ -72,7 +74,8 @@ public class ColaboratorService {
                     .builder()
                     .score(credential.getScore())
                     .password(credential.getPassword())
-                    .passwordStrength(credential.getPasswordStrength())
+                    .forcePass(credential.getForcePass())
+                    .level(credential.getLevel())
                     .build();
             colaborator.getCredentialsHistory().add(history);
 
@@ -96,7 +99,8 @@ public class ColaboratorService {
         }
         if(Objects.nonNull(colaborator.getCredential())){
             dto.setScore(colaborator.getCredential().getScore());
-            dto.setPasswordForce(colaborator.getCredential().getPasswordStrength());
+            dto.setForcePass(colaborator.getCredential().getForcePass());
+            dto.setLevelPass(colaborator.getCredential().getLevel());
         }
         return dto;
     }

@@ -18,7 +18,9 @@ public class CredentialHistory extends Audit{
 
     private byte[] password;
 
-    private int passwordStrength;
+    private String forcePass;
+
+    private int level;
 
     private String validityPeriod;
 

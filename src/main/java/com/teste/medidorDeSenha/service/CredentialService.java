@@ -1,6 +1,7 @@
 package com.teste.medidorDeSenha.service;
 
 import com.teste.medidorDeSenha.domain.Credential;
+import com.teste.medidorDeSenha.domain.enums.ForcePass;
 import com.teste.medidorDeSenha.repository.CredentialHistoryRepository;
 import com.teste.medidorDeSenha.repository.CredentialRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,11 +29,12 @@ public class CredentialService {
 
     private static final String ALL_CHARS = UPPERCASE + LOWERCASE + DIGITS + SYMBOLS;
 
-    private static final int RUIM = 20;
+    private static final int RUIM_LEVEL = 20;
 
-    private static final int MEDIA = 45;
+    private static final int MEDIA_LEVEL = 45;
 
-    private static final int BOM = 75;
+    private static final int BOM_LEVEL= 75;
+
 
     public static final String ALGORITHM = "PBKDF2WithHmacSHA1";
 
@@ -49,26 +51,29 @@ public class CredentialService {
     public Credential saveCredential(String password){
 
         int score = calculatePasswordStrength(password);
-        int level = defineStrengthLevel(score);
         byte[] passEncoder = encoderPassword(password);
-
-        return Credential
+        Credential credential = Credential
                 .builder()
                 .password(passEncoder)
                 .score(score)
-                .passwordStrength(level)
                 .build();
+        defineForcePassAndLevel(credential, score);
+        return credential;
     }
 
-    protected int defineStrengthLevel(int score){
-        if(score <= RUIM){
-            return 1;
-        }else if(score <= MEDIA){
-            return 2;
-        }else if(score <= BOM){
-            return 3;
+    protected void defineForcePassAndLevel(Credential credential, int score){
+        if(score <= RUIM_LEVEL){
+            credential.setForcePass(ForcePass.RUIM.toString());
+            credential.setLevel(1);
+        }else if(score <= MEDIA_LEVEL){
+            credential.setForcePass(ForcePass.MEDIA.toString());
+            credential.setLevel(2);
+        }else if(score <= BOM_LEVEL){
+            credential.setForcePass(ForcePass.BOA.toString());
+            credential.setLevel(3);
         }else{
-            return 4;
+            credential.setForcePass(ForcePass.FORTE.toString());
+            credential.setLevel(4);
         }
     }
 

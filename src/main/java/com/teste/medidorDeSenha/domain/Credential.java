@@ -17,5 +17,7 @@ public class Credential extends Audit{
 
     private byte[] password;
 
-    private int passwordStrength;
+    private String forcePass;
+
+    private int level;
 }
