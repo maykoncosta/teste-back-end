@@ -3,6 +3,7 @@
 Bem-vindo à sua aplicação back-end incrível! 🚀
 <br>
 Visão Geral
+<br>
 Sua aplicação é construída usando o poderoso Spring Framework (versão 3) e Java 17, proporcionando uma base sólida e moderna para o desenvolvimento de aplicativos robustos. Este README fornecerá uma visão geral do seu projeto, orientações de configuração e algumas informações sobre as principais funcionalidades.
 
 Funcionalidades Principais
