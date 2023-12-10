@@ -48,7 +48,7 @@ public class CredentialService {
     @Autowired
     private CredentialHistoryRepository credentialHistoryRepository;
 
-    public Credential saveCredential(String password){
+    public Credential getCredential(String password){
 
         int score = calculatePasswordStrength(password);
         byte[] passEncoder = encoderPassword(password);

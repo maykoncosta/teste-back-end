@@ -10,15 +10,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class ColaboratorService {
 
+    public static final String IS_SUBORDINATE = "SUBORDINATE";
     @Autowired
     private ColaboratorRepository repository;
 
@@ -30,7 +28,67 @@ public class ColaboratorService {
         List<ColaboratorDTO> dtos = colaborators
                 .stream().map(this::mapToDTO)
                 .collect(Collectors.toList());
+
+        dtos = processColaborators(dtos);
+        removeRepeatsObjects(dtos);
         return new ResponseEntity<>(dtos, HttpStatus.OK);
+    }
+
+    private void removeRepeatsObjects(List<ColaboratorDTO> dtos) {
+        List<ColaboratorDTO> toRemove = new ArrayList<>();
+
+
+        final int dtosSize = dtos.size();
+        List<ColaboratorDTO> finalDtos = dtos;
+        dtos.forEach(dto ->{
+            for (int i = 0; i < dtosSize; i++) {
+                finalDtos.get(i).getSubordinates().forEach(subordinate -> {
+                    if(Objects.equals(subordinate.getId(), dto.getId())){
+                        toRemove.add(dto);
+                    }
+                });
+            }
+        });
+
+        dtos.removeAll(toRemove);
+    }
+
+    public List<ColaboratorDTO> processColaborators(List<ColaboratorDTO> dtos) {
+        List<ColaboratorDTO> auxDtos = new ArrayList<>(dtos);
+        return processSubordinates(auxDtos, auxDtos);
+    }
+
+    private List<ColaboratorDTO> processSubordinates(List<ColaboratorDTO> rootList, List<ColaboratorDTO> subordinatesList) {
+        List<ColaboratorDTO> result = new ArrayList<>();
+
+        for (ColaboratorDTO dto : subordinatesList) {
+            List<ColaboratorDTO> updatedSubordinates = dto.getSubordinates().stream()
+                    .map(subordinate -> {
+                        Optional<ColaboratorDTO> matchingDto = rootList.stream()
+                                .filter(candidate -> Objects.equals(candidate.getId(), subordinate.getId()))
+                                .findFirst();
+
+                        return matchingDto.orElse(subordinate);
+                    })
+                    .collect(Collectors.toList());
+
+            dto.setSubordinates(updatedSubordinates);
+
+            // Chama recursivamente para processar os subordinados da subárvore
+            List<ColaboratorDTO> processedSubordinates = processSubordinates(rootList, dto.getSubordinates());
+
+            // Se o próprio DTO ainda existir, adiciona à lista de resultados
+            if (rootList.contains(dto)) {
+                result.add(dto);
+            } else {
+                // Se o DTO não estiver mais na lista principal, verifica se algum subordinado ainda existe
+                if (!processedSubordinates.isEmpty()) {
+                    result.add(dto);
+                }
+            }
+        }
+
+        return result;
     }
 
     public ResponseEntity<ColaboratorDTO> findById(String id) {
@@ -64,57 +122,90 @@ public class ColaboratorService {
         }
     }
 
-    public ResponseEntity<ColaboratorDTO> update(String id, Colaborator colaborator) {
-        Optional<Colaborator> existingColaboratorOptional = repository.findById(id);
+    public ResponseEntity<ColaboratorDTO> update(String id, ColaboratorDTO dto) {
+        Optional<Colaborator> existingColaboratorOptional = Objects.equals(id, IS_SUBORDINATE)
+                ? repository.findById(dto.getLeadId())
+                : repository.findById(id);
 
         if (existingColaboratorOptional.isPresent()) {
             Colaborator existingColaborator = existingColaboratorOptional.get();
-            Credential credential = colaborator.getCredential();
-            CredentialHistory history = CredentialHistory
-                    .builder()
-                    .score(credential.getScore())
-                    .password(credential.getPassword())
-                    .forcePass(credential.getForcePass())
-                    .level(credential.getLevel())
-                    .build();
-            colaborator.getCredentialsHistory().add(history);
+            if (!Objects.equals(id, IS_SUBORDINATE)) {
 
-            existingColaborator.setSubordinates(colaborator.getSubordinates());
-            existingColaborator.setCredential(colaborator.getCredential());
-            existingColaborator.setCredentialsHistory(colaborator.getCredentialsHistory());
+                if (Objects.nonNull(dto.getPassword())) {
+                    Credential oldCredential = existingColaborator.getCredential();
+                    Credential newCredential = credentialService.getCredential(dto.getPassword());
+                    CredentialHistory history = CredentialHistory
+                            .builder()
+                            .score(oldCredential.getScore())
+                            .password(oldCredential.getPassword())
+                            .forcePass(oldCredential.getForcePass())
+                            .level(oldCredential.getLevel())
+                            .build();
+
+                    if (Objects.nonNull(existingColaborator.getCredentialsHistory())) {
+                        existingColaborator.getCredentialsHistory().add(history);
+                    } else {
+                        existingColaborator.setCredentialsHistory(new HashSet<>());
+                        existingColaborator.getCredentialsHistory().add(history);
+                    }
+                    existingColaborator.setCredential(newCredential);
+                } else{
+                    existingColaborator.removeSubordinateById(dto.getSubordinateRemoved());
+                }
+            } else {
+                Set<Colaborator> subordinates = Objects.nonNull(existingColaborator.getSubordinates())
+                        ? existingColaborator.getSubordinates()
+                        : new HashSet<>();
+
+                subordinates.add(saveSubordinate(dto));
+                existingColaborator.setSubordinates(subordinates);
+            }
 
             Colaborator updatedColaborator = repository.save(existingColaborator);
-            ColaboratorDTO dto = mapToDTO(updatedColaborator);
-            return ResponseEntity.ok(dto);
+            ColaboratorDTO newDto = mapToDTO(updatedColaborator);
+            return ResponseEntity.ok(newDto);
         } else {
             return ResponseEntity.notFound().build();
         }
     }
 
+    public Colaborator saveSubordinate(ColaboratorDTO dto) {
+        dto.setId(null);
+        Colaborator entity = mapToEntity(dto);
+        return repository.save(entity);
+    }
+
     private ColaboratorDTO mapToDTO(Colaborator colaborator) {
-        ColaboratorDTO dto = new ColaboratorDTO();
-        dto.setName(colaborator.getName());
-        if(Objects.nonNull(colaborator.getSubordinates())){
-            dto.setSubordinates(colaborator.getSubordinates().stream().map(this::mapToDTO).collect(Collectors.toList()));
-        }
-        if(Objects.nonNull(colaborator.getCredential())){
-            dto.setScore(colaborator.getCredential().getScore());
-            dto.setForcePass(colaborator.getCredential().getForcePass());
-            dto.setLevelPass(colaborator.getCredential().getLevel());
-        }
-        return dto;
+
+        return ColaboratorDTO
+                .builder()
+                .id(colaborator.getId())
+                .name(colaborator.getName())
+                .forcePass(colaborator.getCredential().getForcePass())
+                .score(colaborator.getCredential().getScore())
+                .subordinates(
+                        Objects.nonNull(colaborator.getSubordinates())
+                                ? colaborator.getSubordinates()
+                                .stream().map(this::mapToDTO)
+                                .collect(Collectors.toList())
+                                : new ArrayList<>())
+                .levelPass(colaborator.getCredential().getLevel())
+                .build();
     }
 
     private Colaborator mapToEntity(ColaboratorDTO dto) {
-        Colaborator colaborator = new Colaborator();
-        colaborator.setName(dto.getName());
-        colaborator.setCredential(credentialService.saveCredential(dto.getPassword()));
-        if(Objects.nonNull(dto.getSubordinates())){
-            colaborator.setSubordinates((Set<Colaborator>) dto.getSubordinates()
-                    .stream().map(this::mapToEntity)
-                    .collect(Collectors.toList()));
-        }
-        return colaborator;
+        return Colaborator
+                .builder()
+                .name(dto.getName())
+                .credential(credentialService.getCredential(dto.getPassword()))
+                .subordinates(
+                        Objects.nonNull(dto.getSubordinates()) ?
+                                new HashSet<>(dto.getSubordinates()
+                                        .stream().map(this::mapToEntity)
+                                        .collect(Collectors.toList()))
+                                : new HashSet<>()
+                )
+                .build();
     }
 
 }

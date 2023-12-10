@@ -34,14 +34,14 @@ public class ColaboratorController {
     }
 
     @PostMapping
-    public ResponseEntity<ColaboratorDTO> createColaborator(@RequestBody ColaboratorDTO colaborator) {
-        ResponseEntity<ColaboratorDTO> response = service.save(colaborator);
+    public ResponseEntity<ColaboratorDTO> createColaborator(@RequestBody ColaboratorDTO dto) {
+        ResponseEntity<ColaboratorDTO> response = service.save(dto);
         return new ResponseEntity<>(response.getBody(), response.getStatusCode());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ColaboratorDTO> updateColaborator(@PathVariable String id, @RequestBody Colaborator colaborator) {
-        ResponseEntity<ColaboratorDTO> response = service.update(id, colaborator);
+    public ResponseEntity<ColaboratorDTO> updateColaborator(@PathVariable String id, @RequestBody ColaboratorDTO dto) {
+        ResponseEntity<ColaboratorDTO> response = service.update(id, dto);
         return response != null ? response : new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 

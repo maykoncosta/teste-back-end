@@ -1,11 +1,15 @@
 package com.teste.medidorDeSenha.domain.dto;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
+@Builder
 public class ColaboratorDTO {
+
+    private String id;
 
     private String name;
 
@@ -18,5 +22,9 @@ public class ColaboratorDTO {
     private String forcePass;
 
     private int levelPass;
+
+    private String leadId;
+
+    private String subordinateRemoved;
 
 }
